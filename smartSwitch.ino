@@ -9,8 +9,8 @@ bool deviceState = 0;
 byte buttonPin = 0;
 byte relayPin = 2;
 const char* ssid = "SSID";
-const char* password = "Password";
-const String deviceName = "Dinning Table";
+const char* password = "PASSWORD";
+const String deviceName = "Esp01";
 const uint16_t port = 4444;
 const char * server_ip = "192.168.1.50";
 //END CONFIG
@@ -46,7 +46,7 @@ void setRelay(bool state) {
     digitalWrite(relayPin, HIGH);
     sendDeviceState();
   } else {
-    printData("New state is HIGH");
+    printData("New state is LOW");
     deviceState = state;
     digitalWrite(relayPin, LOW);
     sendDeviceState();
@@ -102,9 +102,9 @@ void sendDeviceState() {
   String jsonState = "\",\"state\":";
   String state = "";
   if (deviceState) {
-    state = "\"True\"";
+    state = "true";
   } else {
-    state = "\"False\"";
+    state = "false";
   }
   String jsonClose = "}";
   String output = jsonName + deviceName + jsonState + state + jsonClose;
