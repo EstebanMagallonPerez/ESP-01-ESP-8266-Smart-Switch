@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+import time
 
 class customDeviceAPI:
     shouldHighlight = True
@@ -22,27 +23,33 @@ class customDeviceAPI:
         self.sendUpdate(b"2")
 
     def getState(self):
-        output = self.sendHandler(data=b"3")
-        #print("state from handler is:", output)
-        if output == b'\x01':
-            return True
-        if output == b'\x00':
-            return False
-        return False
-    
+        try:
+            output = self.sendHandler(data=b"3")
+            data = json.loads(output)
+            if "state" in data:
+                return data["state"]
+        except:
+            return None
+        return None
     
     def sendUpdate(self,data):
         x = threading.Thread(target=lambda: self.sendHandler(data=data))
         x.start()
     
     def sendHandler(self,data):
-        #print("async handling of send:", self.ip, data)
         BUFFER_SIZE = 1024
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((self.ip, self.port))
-        s.send(data)
-        data = s.recv(BUFFER_SIZE)
-        s.close()
+        try:
+            s.settimeout(1)
+            s.connect((self.ip, self.port))
+            s.send(data)
+            data = s.recv(BUFFER_SIZE)
+            s.close()
+            decodedData = data.decode('utf-8')
+            data = json.loads(decodedData)
+            self.stateCallback(data)
+        except:
+            return None
         return data
 
 class pairedDevices:
@@ -71,14 +78,25 @@ class deviceManager:
     port = None
     callback = None
     pairList = pairedDevices()
+    tcpServer = None
     def __init__(self,host,port):
         self.host = host
         self.port = port
         print("starting with:", host,port)
 
     def start(self):
-        x = threading.Thread(target=self.listener)
-        x.start()
+        self.tcpServer = threading.Thread(target=self.listener)
+        self.tcpServer.start()
+        self.tcpServerWatcher = threading.Thread(target=self.keepAlive)
+        self.tcpServerWatcher.start()
+
+    def keepAlive(self):
+        while 1:
+            if not self.tcpServer.is_alive():
+                self.tcpServer = threading.Thread(target=self.listener)
+                self.tcpServer.start()
+            time.sleep(10)
+        
     
     def setEventCallback(self,callback):
         self.callback = callback
@@ -94,8 +112,9 @@ class deviceManager:
                     while True:
                         data = conn.recv(1024)
                         if data:
-                            decodedData = data.decode('utf-8')
-                            data = json.loads(decodedData[:-1])
+                            decodedData = data.decode('utf-8').replace('\x00', '')
+                            print("decoded data", data, decodedData)
+                            data = json.loads(decodedData)
                             data['ip'] = addr[0]
                             if data['name'] not in self.pairList.devices:
                                 self.pairList.addPairedDevice(data)
@@ -113,4 +132,5 @@ device = customDeviceAPI('192.168.1.148',4444)
 deviceListener = deviceManager(SERVER_HOST,CUSTOM_PORT)
 deviceListener.setEventCallback(print)
 deviceListener.start()
+
 '''
