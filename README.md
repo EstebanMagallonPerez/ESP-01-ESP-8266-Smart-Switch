@@ -11,3 +11,5 @@ Smart switch for ESP-01 devices/esp32 device with micropython... probably works 
 2. GPIO-0 (build in button) will toggle the internal state of the device
 3. GPIO-1 is used to trigger a relay
 
+## Dummy server
+Listens to and sends data to the connected devices. Some simple TCP server like this could be used to manage device states
