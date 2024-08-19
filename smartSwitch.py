@@ -3,17 +3,18 @@ import socket
 import time
 import json
 import _thread
+import machine
 from machine import Pin
 
 deviceName = "pythonDevice"
-SSID = 'Resident'
-PASS  = 'Drowssap_525'
+SSID = 'SSID'
+PASS  = 'PASSWORD'
 SERVER_IP = '192.168.1.50'
 SERVER_PORT = 4444
 
-button = Pin(0, Pin.IN)
+button = Pin(5, Pin.IN, Pin.PULL_UP)
 led = Pin(15, Pin.OUT)
-relay = Pin(1, Pin.OUT)
+relay = Pin(3, Pin.OUT)
 BUFFER_SIZE = 1024
 lastVal = 1
 state = 0
@@ -41,9 +42,9 @@ def socketListener():
         cl, addr = s.accept()
         data = cl.recv(1024)
         if data == b"0":
-            setState(0)
+            setState(False)
         if data == b"1":
-            setState(1)
+            setState(True)
         if data == b"2":
             toggle()
         cl.send(msgToSend())
@@ -52,12 +53,11 @@ def socketListener():
     print("exiting thread")
 
 def sendMsg():
-    led.value(1)
     sendSocket = socket.socket()
+    sendSocket.settimeout(1)
     sendSocket.connect((SERVER_IP, SERVER_PORT))
     sendSocket.send(msgToSend())
     sendSocket.close()
-    led.value(0)
     
 def msgToSend():
     global state
@@ -89,8 +89,13 @@ while counter < 20:
     elif lastVal == 0 and button.value() == 1:
         print("resetting things")
         lastVal = 1
+        counter = 0
     elif button.value() == 0:
         counter += 1
+
+print("rebooting device")
+time.sleep(3)
+machine.reset()
         
     
 
